@@ -18,20 +18,11 @@ public class Spreadsheet {
 
 	public static Cell[][] cells;
 
-	// static List<Cell> topologicalSortL = new ArrayList<Cell>();
-	static Queue<Cell> topologicalSortS = new LinkedList<Cell>();
+	//for topological sort.
+	public static Queue<Cell> startNodes = new LinkedList<Cell>();
 	
-	static Map<String,LinkedList<Cell>> dependancyMap = new HashMap<String,LinkedList<Cell>>(10000);
+	public static Map<Cell, LinkedList<Cell>> dependancyMap = new HashMap<Cell,LinkedList<Cell>>();
 
-	static void testCode() throws CircularDependancyException {
-		Cell testCell = new Cell();
-		testCell.setTokens("-100 1 *");
-		System.out.println(testCell.evaluate());		
-	}
-	
-	public Spreadsheet(){
-
-	}
 
 	public static void main(String[] args) {		
 		Scanner sc = new Scanner(System.in);
@@ -39,6 +30,7 @@ public class Spreadsheet {
 			if (args.length > 0)
 				input = args[0];
 			sc = new Scanner(new File(input));
+
 		} catch (Exception e) {
 
 		}		
@@ -48,54 +40,16 @@ public class Spreadsheet {
 		sc.nextLine();
 
 		try {
-		
+			//matrix of all rows*cols cells
 			cells = new Cell[rows][cols];
-			for (int row = 0; row < rows; row++) {			
-				for (int col = 0; col< cols; col++) {
-					Cell cell = new Cell();
-					cells[row][col] = cell;
-					String tokens = sc.nextLine();
-					cell.setTokens(tokens);
-					
-					
-					cell.setName((char)('A'+row)+String.valueOf(col+1));
-					cell.edgeCount = cell.references.size();
-					if (cell.edgeCount == 0) {
-						topologicalSortS.add(cell);
-					} else {
-						List<String> references = cell.references;
-						for (String string : references) {
-							addDependancyMap(string,cell);
-						}
-					}
-				}
-			}
 			
-			// do topological sort
-			int countEvaluated = 0;
-			while (topologicalSortS.size() > 0) {
-				Cell cell = topologicalSortS.poll();
-				//cell.evaluate();
-				countEvaluated++;
-				// topologicalSortL.add(cell);
-	
-				// get every cell x that refer cell y
-				List<Cell> list = dependancyMap.get(cell.name);
-				if (null == list){
-					continue;
-				}
-					
-				for (Cell cellx : list) {
-					cellx.edgeCount--;
-					if (cellx.edgeCount == 0) {
-						topologicalSortS.add(cellx);
-					}
-				}
-			}
+			initializeCells(sc, rows, cols);
 			
+			// construct a hashmap for detecting circular dependency using topological sort. 
+			constructDependencyMap(cells, dependancyMap);
 			
-			if (countEvaluated < rows * cols){
-				throw new CircularDependancyException("circular dependency detected: " + countEvaluated + " cells evaluated");
+			if (hasCircularDependecy(rows * cols)){
+				throw new Exception("circular dependency detected.");
 			}
 				
 			 
@@ -110,7 +64,7 @@ public class Spreadsheet {
 			}
 			
 		
-		} catch (CircularDependancyException e) {
+		} catch (Exception e) {
 			System.out.println(e.getMessage());
 			System.exit(1);
 		} finally{
@@ -118,21 +72,71 @@ public class Spreadsheet {
 		}
 	}
 	
-	private static void initializeCells(){
+	
+	private static boolean hasCircularDependecy(int totalNum){
 		
+		// do topological sort
+		int countEvaluated = 0;
+		while (startNodes.size() > 0) {
+			Cell cell = startNodes.poll();
+			countEvaluated++;
+
+			// get every cell x that refer cell y
+			List<Cell> list = dependancyMap.get(cell);
+			if (null == list){
+				continue;
+			}
+				
+			for (Cell referCell : list) {
+				referCell.indegree--;
+				if (referCell.indegree == 0) {
+					startNodes.add(referCell);
+				}
+			}
+		}
+		
+		return countEvaluated != totalNum;
 	}
 	
-	private static void constructDependencyMap(){
-		
+	
+	private static void initializeCells(Scanner sc, int rows, int cols){
+		for (int row = 0; row < rows; row++) {			
+			for (int col = 0; col< cols; col++) {
+				Cell cell = new Cell(row, col);
+				cells[row][col] = cell;
+				String tokens = sc.nextLine();
+				cell.setContent(tokens);
+			}
+		}
 	}
+	
+	private static void constructDependencyMap(Cell[][] cells, Map<Cell, LinkedList<Cell>> dependancyMap){
+		
+		for (int row = 0; row < cells.length; row++) {			
+			for (int col = 0; col< cells[0].length; col++) {
+				Cell cell = cells[row][col];
+				cell.indegree = cell.references.size();
+				if (cell.indegree == 0) {
+					startNodes.add(cell);
+				} else {
+					List<Token> references = cell.references;
+					for (Token token : references) {
+						
+						addDependancyMap(cells[token.referenceRow][token.referenceColumn], cell);
+					}
+				}
+			}
+		}
+	}
+	
 
-	private static void addDependancyMap(String string, Cell cell) {
-		LinkedList<Cell> list = dependancyMap.get(string);
+	private static void addDependancyMap(Cell currentCell, Cell referenceCell) {
+		LinkedList<Cell> list = dependancyMap.get(currentCell);
 		if (null == list) {
 			list = new LinkedList<Cell>();
-			dependancyMap.put(string,list);
+			dependancyMap.put(currentCell,list);
 		}
-		list.add(cell);
+		list.add(referenceCell);
 	}
 
 }

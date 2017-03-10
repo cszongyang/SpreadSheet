@@ -2,22 +2,7 @@ package Quantcast;
 
 
 public class Token {
-
-	public Token(int type) {
-		this.type = type;
-	}
-
-	public Token(String refer) {
-		type = 1;
-		referenceRow = refer.charAt(0)-65;
-		referenceColumn = Integer.valueOf(refer.substring(1))-1;
-	}
-
-	public Token(double d) {
-		type = 0;
-		value = d;
-	}
-
+	
 	// 0 = value
 	// 1 = reference
 	// 2 = operator+
@@ -26,33 +11,41 @@ public class Token {
 	// 5 = operator/
 	// 6 = operator ++
 	// 7 = operator --
-	int type;
+	public int type;
 	
-	int operatorType;
-	double value;
-	int referenceRow;
-	int referenceColumn;
+	public int operatorType;
+	public double value;
+	public int referenceRow;
+	public int referenceColumn;
+
 	
-	@Override
-	public String toString() {
-		switch (type) {
-		case 0:
-			return String.valueOf(value);
-		case 1:
-			return String.valueOf((char)(referenceRow+65)+referenceColumn);
-		case 2:
-			return "+";
-		case 3:
-			return "-";
-		case 4:
-			return "*";
-		case 5:
-			return "/";
-		case 6:
-			return "++";
-		case 7:
-			return "--";
+	public Token(String token) {
+		
+		if (token.equals("+")) {
+			type = 2;
+		} else if (token.equals("-")) {
+			type = 3;
+		} else if (token.equals("*")) {
+			type = 4;
+		} else if (token.equals("/")) {
+			type = 5;
+		} else if (token.equals("++")) {
+			type = 6;
+		} else if (token.equals("--")) {
+			type = 7;
+		} else {
+			char c = token.charAt(0);
+			if ('A' <= c && c <= 'Z') {
+				// reference
+				type = 1;
+				referenceRow = token.charAt(0)-65;
+				referenceColumn = Integer.valueOf(token.substring(1))-1;
+				
+			} else {
+				// number
+				type = 0;
+				value = Double.valueOf(token);
+			}
 		}
-		return super.toString();
 	}
 }

@@ -8,111 +8,95 @@ import java.util.StringTokenizer;
 public class Cell {
 
 	private String input;
-	public String name;
+	
+	public int row;
+	public int col;
 
-	private double evaluatedValue;
-	public boolean isEvaluated;
+	private double cellValue;
+	private boolean isEvaluated;
 
-	public List<String> references;
+	public List<Token> references;
 	public List<Token> tokens;
 	
-	public int edgeCount;
+	public int indegree;
 	
-	public Cell(){
+	public Cell(final int row, final int col){
 		references = new ArrayList<>();
 		tokens = new ArrayList<>();
+		this.row = row;
+		this.col = col;
 	}
 
-	public void setTokens(String input) {
+	public void setContent(String input) {
 		this.input = input.toUpperCase();
 		String[] tokenList = input.trim().toUpperCase().split("\\s+");
 		
 		for(String token : tokenList) {
 			
-			if (token.equals("+")) {
-				tokens.add(new Token(2));
-			} else if (token.equals("-")) {
-				tokens.add(new Token(3));
-			} else if (token.equals("*")) {
-				tokens.add(new Token(4));
-			} else if (token.equals("/")) {
-				tokens.add(new Token(5));
-			} else if (token.equals("++")) {
-				tokens.add(new Token(6));
-			} else if (token.equals("--")) {
-				tokens.add(new Token(7));
-			} else {
-				char c = token.charAt(0);
-				if ('A' <= c && c <= 'Z') {
-					// reference
-					tokens.add(new Token(token));
-					references.add(token);
-				} else {
-					// integer
-					double d = Double.valueOf(token);
-					tokens.add(new Token(d));
-				}
+			Token t = new Token(token);
+			tokens.add(t);
+			if(t.type == 1){
+				references.add(t);
 			}
+			
 		}
 	}
 
-	public double evaluate() throws CircularDependancyException {		
-		if (isEvaluated)
-			return evaluatedValue;
-
-		Stack<Double> stack = new Stack<Double>();
-		double eval, arg2, arg1;
-		for (Token token : tokens) {
-			switch (token.type) {
-			case 0:
-				stack.push(token.value);
-				break;
-			case 1:
-				Cell reference = Spreadsheet.cells[token.referenceRow][token.referenceColumn];
-				eval = reference.evaluate();
-				stack.push(eval);
-				break;
-			case 2:
-				arg1 = stack.pop();
-				arg2 = stack.pop();
-				eval = arg2 + arg1;
-				stack.push(eval);
-				break;
-			case 3:
-				arg1 = stack.pop();
-				arg2 = stack.pop();
-				eval = arg2 - arg1;
-				stack.push(eval);
-				break;
-			case 4:
-				arg1 = stack.pop();
-				arg2 = stack.pop();
-				eval = arg2 * arg1;
-				stack.push(eval);
-				break;
-			case 5:
-				arg1 = stack.pop();
-				arg2 = stack.pop();
-				eval = arg2 / arg1;
-				stack.push(eval);
-				break;
-			case 6:
-				arg1 = stack.pop();
-				eval = arg1 + 1;
-				stack.push(eval);
-				break;
-			case 7:
-				arg1 = stack.pop();
-				eval = arg1 - 1;
-				stack.push(eval);
-				break;
-			}
+	public double evaluate() {		
+		if (isEvaluated){
+			return cellValue;
 		}
-		evaluatedValue = stack.pop();
+			
+		Stack<Double> stack = new Stack<Double>();
+		for (Token token : tokens) {
+
+			//number
+			if (token.type == 0) {
+				stack.push(token.value);
+			} 
+			// reference
+			else if (token.type == 1) {
+				Cell reference = Spreadsheet.cells[token.referenceRow][token.referenceColumn];
+				stack.push(reference.evaluate());
+			} 
+			//+
+			else if (token.type == 2) {
+				stack.push(stack.pop() + stack.pop());
+			} 
+			//-
+			else if (token.type == 3) {
+				stack.push((-1) * stack.pop() + stack.pop());
+			} 
+			//*
+			else if (token.type == 4) {
+				stack.push(stack.pop() * stack.pop());
+			} 
+			// /
+			else if (token.type == 5) {
+				stack.push((1 / stack.pop()) * stack.pop());
+			} 
+			//++
+			else if (token.type == 6) {
+				stack.push(stack.pop() + 1);
+			} 
+			//--
+			else if (token.type == 7) {
+				stack.push(stack.pop() - 1);
+			} 
+			
+			
+		}
+		
 		isEvaluated = true;
-		return evaluatedValue;
+		cellValue = stack.pop();
+		return cellValue;
 	}
 	
+	
+	@Override
+	public int hashCode() {
+		return (String.valueOf(row) + String.valueOf(col)).hashCode();
+	}
 	
 	public void setEvaluated(boolean isEvaluated) {
 		this.isEvaluated = isEvaluated;
@@ -122,15 +106,4 @@ public class Cell {
 		return isEvaluated;
 	}
 
-	public void setName(String name) {
-		this.name = name;
-	}
-	
-	public String getName(String name) {
-		return this.name;
-	}
-
-	public String toString() {
-		return name;
-	}
 }
